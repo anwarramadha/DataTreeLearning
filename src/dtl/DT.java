@@ -5,17 +5,17 @@
  */
 package dtl;
 import java.util.*;
-import weka.core.Instance;
 /**
  *
  * @author AnwarRamadha
  */
 public class DT
 {
-    Instance ins;
     private final DT parent;
     private final List<DT> child = new ArrayList();
-    private String id;
+    private double attribute;
+    private double value;
+    
     
     public DT(DT parent) {
         this.parent = parent;
@@ -28,22 +28,30 @@ public class DT
     public List<DT> getChild(){
         return child;
     }
-    public String getId() {
-        return id;
+    public double getId() {
+        return attribute;
     }
     
-    public void setId(String id) {
-        this.id = id;
+    public void setAttribute(double attribute) {
+        this.attribute = attribute;
     }
             
-    public static DT addChild(DT parent, String id) {
+    public double getValue() {
+        return value;
+    }
+    
+    public void setValue(double value) {
+        this.value = value;
+    }
+    
+    public static DT addChild(DT parent, double attribute, double value) {
         DT node = new DT(parent);
-        node.setId(id);
+        node.setAttribute(attribute);
         parent.getChild().add(node);
         return node;
     }
     
-    public static void printTree(DT node, String appender) {
+    public static void printTree(DT node, int appender) {
         System.out.println(appender + node.getId());
         for (DT each : node.getChild()) {
          printTree(each, appender + appender);

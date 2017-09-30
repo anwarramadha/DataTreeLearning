@@ -145,6 +145,24 @@ public class ID3 extends AbstractClassifier{
                     proportion[attrib_values.indexOf(in.stringValue(next_attrib_idx))][class_value.indexOf(in.stringValue(attrib_idx))]++;
     //            proportion[value.indexOf(in.value(next_attrib_idx))]++;
             }
+            for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
+                double entropy = 0;
+                double num_val = 0;
+
+                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
+    //                System.out.println(proportion[cls_idx][att_idx]);
+                   num_val +=  proportion[cls_idx][att_idx];
+                }
+
+                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
+
+                    if (num_val != 0) {
+                        double prob = (double) proportion[cls_idx][att_idx]/num_val;
+                        entropy += (-1) * prob * log2(prob);
+                    }
+                }
+                gain -= entropy * num_val/i.numInstances(); // jelas salah
+            }
         }
         else {
             attribute_num = calculateValueOccurence(i, attrib_idx, value);
@@ -194,21 +212,6 @@ public class ID3 extends AbstractClassifier{
                 }
             }
         }
-        
-        
-////        System.out.println(class_num);
-//        for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
-//            double entropy = 0;
-//            
-//            for(int att_idx = 0; att_idx < attribute_num; att_idx++) {
-//                
-//                double prob = (double) proportion[cls_idx][att_idx]/i.numInstances();
-//                if (prob!=0)
-//                    entropy += ((-1) * prob * log2(prob))* prob;
-//                System.out.println(entropy);
-//            }
-//            gain -= entropy ; // jelas salah
-//        }
         
         return gain;
     }

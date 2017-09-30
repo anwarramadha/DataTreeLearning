@@ -14,7 +14,7 @@ public class DT
     private final DT parent;
     private final List<DT> child = new ArrayList();
     private double attribute;
-    private double value;
+    private String value;
     
     
     public DT(DT parent) {
@@ -36,11 +36,11 @@ public class DT
         this.attribute = attribute;
     }
             
-    public double getValue() {
+    public String getValue() {
         return value;
     }
     
-    public void setValue(double value) {
+    public void setValue(String value) {
         this.value = value;
     }
     

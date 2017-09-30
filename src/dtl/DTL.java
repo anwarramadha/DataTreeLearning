@@ -21,14 +21,17 @@ public class DTL {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws FileNotFoundException, IOException {
+    public static void main(String[] args) throws FileNotFoundException, IOException, Exception {
         // TODO code application logic here
-        BufferedReader reader = new BufferedReader(new FileReader("E:\\Weka-3-8\\data\\iris.arff"));
+        BufferedReader reader = new BufferedReader(new FileReader("E:\\Weka-3-8\\data\\weather.nominal.arff"));
         Instances i = new Instances(reader);
-        System.out.println(i.instance(0).value(i.attribute(i.numAttributes() - 1)));
-        
+        i.setClassIndex(i.numAttributes() - 1);
         ID3 id3 = new ID3();
-        
+//        System.out.println(id3.calculateEntropy(i, 4));
+        System.out.println(id3.calculateGain(i, 4, 2, true, ""));//test gain againts root
+//        System.out.println(id3.calculateGain(i, 0, 2, false, "sunny"));
+//        System.out.println(id3.calculateGain(i, 0, 1, false, "sunny"));
+//        id3.buildClassifier(i);
     }
     
 }

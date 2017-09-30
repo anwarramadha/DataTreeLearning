@@ -8,6 +8,7 @@ package dtl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Stack;
 import weka.classifiers.AbstractClassifier;
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -71,8 +72,10 @@ public class ID3 extends AbstractClassifier{
         double entropy = 0;
         for (int idx = 0; idx < attribute_num; idx++) {
             double prob = (double)proportion[idx]/divider;
-            entropy += (-1) * prob*log2(prob);
+            if (prob!=0)
+                entropy += (-1) * prob*log2(prob);
         }
+//        System.out.println(entropy);
         return entropy;
     }
     
@@ -102,9 +105,12 @@ public class ID3 extends AbstractClassifier{
             divider += proportion[idx];
         }
         for (int idx = 0; idx < num_class; idx++) {
-            double prob = (double)proportion[idx]/divider;
-            if (prob!=0)
-            entropy += (-1) * prob*log2(prob);
+            if (divider != 0) {
+                double prob = (double)proportion[idx]/divider;
+//                System.out.print(prob+" ");
+                if (prob !=0) 
+                    entropy += (-1) * prob*log2(prob);
+            }
         }
         
         return entropy;
@@ -121,6 +127,7 @@ public class ID3 extends AbstractClassifier{
     public double calculateGain(Instances i, int attrib_idx, int next_attrib_idx, boolean root, String value) {
         
         double ins_entropy = calculateEntropy(i, attrib_idx, root, value);
+//        System.out.println(ins_entropy);
         
         int attribute_num;// = i.numDistinctValues(next_attrib_idx);
         int class_num;// = i.numDistinctValues(attrib_idx);
@@ -128,7 +135,6 @@ public class ID3 extends AbstractClassifier{
         List class_value = attributeMember(i, attrib_idx);
         List attrib_values = new ArrayList();
         List attrib_values_temp = attributeMember(i, next_attrib_idx);
-//        System.out.println(attrib_values_temp);
         int[][] proportion;
         
         double gain = ins_entropy;
@@ -140,8 +146,8 @@ public class ID3 extends AbstractClassifier{
             for (Instance in : i) {
 
                 if (attrib_values.indexOf(in.stringValue(next_attrib_idx)) != -1)
-                    proportion[attrib_values.indexOf(in.stringValue(next_attrib_idx))][class_value.indexOf(in.stringValue(attrib_idx))]++;
-    //            proportion[value.indexOf(in.value(next_attrib_idx))]++;
+                    proportion[attrib_values.indexOf(in.stringValue(next_attrib_idx))]
+                            [class_value.indexOf(in.stringValue(attrib_idx))]++;
             }
             for (int cls_idx = 0; cls_idx < attrib_values.size(); cls_idx ++) {
                 double entropy = 0;
@@ -204,14 +210,15 @@ public class ID3 extends AbstractClassifier{
 
                 for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
 
-                entropy = calculateEntropyV(i, 0, 
-                        next_attrib_idx, attrib_values, "sunny", attrib_values.get(att_idx).toString());
-
+                    entropy = calculateEntropyV(i, attrib_idx, 
+                            next_attrib_idx, attrib_values, class_value.get(cls_idx).toString(), attrib_values.get(att_idx).toString());
+//                    System.out.println(class_value);
+//                    System.out.println(entropy);
                     gain -= entropy * (proportion[cls_idx][att_idx]/num_val);
                 }
             }
         }
-        
+//        System.out.println(gain);
         return gain;
     }
      
@@ -233,12 +240,68 @@ public class ID3 extends AbstractClassifier{
         root.setAttribute(idxMax(gains));
     
         // Bangun node baru
-        int num_child = i.attribute((int) root.getId()).numValues(), idx=0;
-        while (idx < num_child) {
+        
+        Stack<DT> nodeStack = new Stack();
+        nodeStack.push(root);
+        
+        while (!nodeStack.isEmpty()) {
+            DT parent = nodeStack.peek();
+            List parentValue = attributeMember(i, (int) parent.getAttribute());
+            int num_child = i.attribute((int) parent.getAttribute()).numValues(), idx=0;
+            gains.clear();
             
-            idx++;
+            while (idx < num_child) {
+                
+                if (calculateEntropy(i, (int)parent.getAttribute(), false, 
+                        parentValue.get(idx).toString()) != 0) {
+                    
+                    for (int j = 0; j < i.numAttributes(); j++) {
+                        if (!parent.getUsedAttribute().contains(j))
+                            gains.add(calculateGain(i, (int) parent.getAttribute(), j, 
+                                    false, parentValue.get(idx).toString()));
+                    }
+                    
+                    double selectedAttribute = (double) idxMax(gains);
+                    DT child = DT.addChild(parent, selectedAttribute);
+                    child.setValue(parentValue.get(idx).toString());
+                    child.addUsedAttributeValue(idx);
+                    
+                    if (selectedAttribute == i.classIndex()) {
+                        for(int j = 0; j < i.numDistinctValues(i.classIndex()); j++) {
+                            gains.add(calculateGain(i, (int) child.getAttribute(), j, 
+                                        false, parentValue.get(idx).toString()));
+                        }
+                    
+                        child.setClass(i.instance(idxMax(gains)).stringValue(i.classIndex()));
+                    }
+                    else {
+                        nodeStack.push(child);
+                    }
+                    break;
+                }
+                else if (calculateEntropy(i, (int)parent.getAttribute(), false, 
+                        parentValue.get(idx).toString()) == 0 || 
+                        parent.getUsedAttribute().size() >= i.numAttributes()){
+                    
+                    DT child = DT.addChild(parent, (double)i.classIndex());
+                    
+                    for(int j = 0; j < i.numDistinctValues(i.classIndex()); j++) {
+                        gains.add(calculateGain(i, (int) child.getAttribute(), j, 
+                                    false, parentValue.get(idx).toString()));
+                    }
+                    
+                    child.setClass(i.instance(idxMax(gains)).stringValue(i.classIndex()));
+//                    nodeStack.pop();
+                    gains.clear();
+                }
+                idx++;
+            }
+//            if (parent.getChild().size() == parent.getUsedAttribute().size()-1)
+//                nodeStack.pop();
+            
         }
         
+        DT.printTree(root, " ");
     }
     
     

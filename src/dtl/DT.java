@@ -13,8 +13,10 @@ public class DT
 {
     private final DT parent;
     private final List<DT> child = new ArrayList();
+    private List<Double> usedAttribute = new ArrayList();
     private double attribute;
     private String value;
+    private String classVal;
     
     
     public DT(DT parent) {
@@ -28,7 +30,7 @@ public class DT
     public List<DT> getChild(){
         return child;
     }
-    public double getId() {
+    public double getAttribute() {
         return attribute;
     }
     
@@ -44,17 +46,36 @@ public class DT
         this.value = value;
     }
     
-    public static DT addChild(DT parent, double attribute, double value) {
+    public String getClassVal() {
+        return classVal;
+    }
+    
+    public void setClass(String classVal) {
+        this.classVal = classVal;
+    }
+    
+    public List getUsedAttribute() {
+        return usedAttribute;
+    }
+    
+    public void addUsedAttributeValue(double value) {
+        usedAttribute.add(value);
+    }
+    
+    public static DT addChild(DT parent, double attribute) {
         DT node = new DT(parent);
         node.setAttribute(attribute);
         parent.getChild().add(node);
         return node;
     }
     
-    public static void printTree(DT node, int appender) {
-        System.out.println(appender + node.getId());
+    public static void printTree(DT node, String appender) {
+        System.out.println(appender + node.getAttribute());
         for (DT each : node.getChild()) {
-         printTree(each, appender + appender);
+            if (each.getClassVal() != null)
+                printTree(each, appender + appender+" "+each.getClassVal());
+            else
+                printTree(each, appender + appender);
         }
     }
 }

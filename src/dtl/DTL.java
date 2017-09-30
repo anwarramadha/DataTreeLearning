@@ -28,9 +28,9 @@ public class DTL {
         i.setClassIndex(i.numAttributes() - 1);
         ID3 id3 = new ID3();
 //        System.out.println(id3.calculateEntropy(i, 4));
-        System.out.println(id3.calculateGain(i, 4, 2, true, ""));//test gain againts root
+//        System.out.println(id3.calculateGain(i, 4, 2, true, ""));//test gain againts root
 //        System.out.println(id3.calculateGain(i, 0, 2, false, "sunny"));
-//        System.out.println(id3.calculateGain(i, 0, 1, false, "sunny"));
+        System.out.println(id3.calculateGain(i, 0, 1, false, "sunny"));
 //        id3.buildClassifier(i);
     }
     

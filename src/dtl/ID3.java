@@ -196,19 +196,19 @@ public class ID3 extends AbstractClassifier{
         }
         
         
-//        System.out.println(class_num);
-        for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
-            double entropy = 0;
-            
-            for(int att_idx = 0; att_idx < attribute_num; att_idx++) {
-                
-                double prob = (double) proportion[cls_idx][att_idx]/i.numInstances();
-                if (prob!=0)
-                    entropy += ((-1) * prob * log2(prob))* prob;
-                System.out.println(entropy);
-            }
-            gain -= entropy ; // jelas salah
-        }
+////        System.out.println(class_num);
+//        for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
+//            double entropy = 0;
+//            
+//            for(int att_idx = 0; att_idx < attribute_num; att_idx++) {
+//                
+//                double prob = (double) proportion[cls_idx][att_idx]/i.numInstances();
+//                if (prob!=0)
+//                    entropy += ((-1) * prob * log2(prob))* prob;
+//                System.out.println(entropy);
+//            }
+//            gain -= entropy ; // jelas salah
+//        }
         
         return gain;
     }

@@ -135,30 +135,29 @@ public class ID3 extends AbstractClassifier{
         if (root) {
             attribute_num = i.numDistinctValues(next_attrib_idx);
             class_num = i.numDistinctValues(attrib_idx);
-            proportion = new int[class_num][attribute_num];
+            proportion = new int[attribute_num][class_num];
             attrib_values = attrib_values_temp;
             for (Instance in : i) {
-    //            System.out.println(attrib_values.indexOf(in.stringValue(next_attrib_idx)));
-//                System.out.println(class_value);
 
                 if (attrib_values.indexOf(in.stringValue(next_attrib_idx)) != -1)
                     proportion[attrib_values.indexOf(in.stringValue(next_attrib_idx))][class_value.indexOf(in.stringValue(attrib_idx))]++;
     //            proportion[value.indexOf(in.value(next_attrib_idx))]++;
             }
-            for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
+            for (int cls_idx = 0; cls_idx < attrib_values.size(); cls_idx ++) {
                 double entropy = 0;
                 double num_val = 0;
 
-                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
+                for(int att_idx = 0; att_idx < class_num; att_idx++) {
     //                System.out.println(proportion[cls_idx][att_idx]);
                    num_val +=  proportion[cls_idx][att_idx];
                 }
 
-                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
+                for(int att_idx = 0; att_idx < class_num; att_idx++) {
 
                     if (num_val != 0) {
                         double prob = (double) proportion[cls_idx][att_idx]/num_val;
-                        entropy += (-1) * prob * log2(prob);
+                        if (prob!=0)
+                            entropy += (-1) * prob * log2(prob);
                     }
                 }
                 gain -= entropy * num_val/i.numInstances(); // jelas salah
@@ -225,18 +224,19 @@ public class ID3 extends AbstractClassifier{
         List gains = new ArrayList();
         
         // buat root. Tidak punya value.
-        for (int idx = 0; idx < i.numAttributes(); idx++) {
-            gains.add(calculateGain(i, i.numAttributes() - 1, idx, true, ""));
+//        System.out.println(id3.calculateGain(i, 4, 3, true, ""));//test gain againts root
+        for (int idx = 0; idx < i.numAttributes()-1; idx++) {
+            gains.add(calculateGain(i, i.classIndex(), idx, true, ""));
         }
         
         DT root = new DT(null);
         root.setAttribute(idxMax(gains));
-        System.out.println(idxMax(gains));
     
         // Bangun node baru
         int num_child = i.attribute((int) root.getId()).numValues(), idx=0;
         while (idx < num_child) {
-            break;
+            
+            idx++;
         }
         
     }

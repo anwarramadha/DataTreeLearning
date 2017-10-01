@@ -24,6 +24,15 @@ public class ID3 extends AbstractClassifier{
         return Math.log(value)/Math.log(2);
     }
     
+    /**
+     * Menghasilkan list of attribute member yang ditunjuk oleh index tertentu
+     * attribute pada list dipastikan tidak ada duplikasi
+     * 
+     * @param i (weka instances)
+     * @param attrib_idx (index attribute dimana tempat mencari value yang di
+     * inginkan.
+     * @return
+     */
     private List attributeMember(Instances i, int attrib_idx) {
         
         int attribute_num = i.numDistinctValues(attrib_idx);
@@ -40,64 +49,92 @@ public class ID3 extends AbstractClassifier{
         return value;
     }
     
+    /**
+     * Mengembalikan nilai entropy.
+     * Entropy = 0 => semua examples dalam satu kelas
+     * Entropy = 1 => p+ == p-
+     * 
+     * @param i
+     * @param records
+     * @return 
+     */
     public double calculateEntropy(Instances i, List<Record> records) {
-        if (records.size() > 0) {
-            int num_class = i.numClasses();
-            int[] proportion = new int[num_class];
+        int num_class = i.numClasses();
+        int[] proportion = new int[num_class];
 
-            Record parent = records.get(0);
+        Record parent = records.get(0);
 
-            List<String> values = new ArrayList();
-            int idxForSearchProportion;
-
-            if (parent.getValue().length() !=0 ) {
-                for (int idx = 0; idx < records.size(); idx++) {
-                    if (records.get(idx).value.length() != 0)
-                        values.add(records.get(idx).getValue());
-                }
-    //            System.out.println(values);
-                idxForSearchProportion = values.size();
-            }
-            else {
-                values = attributeMember(i,(int) parent.getAttribute());
-    //            System.out.println(values);
-                idxForSearchProportion = 1;
+        List<String> values = new ArrayList();
+        int idxForSearchProportion;
+        
+        /**
+         * Jika nilai S pada Gain(S,A) memiliki variable tertentu, maka
+         * masukkan semua varibel tersebut kedalam suatu list. List digunakan 
+         * untuk melakukan pengecekan apakah nilai pada instances cocok
+         * dengan urutan tertentu.
+         */
+        if (parent.getValue().length() !=0 ) {
+            for (int idx = 0; idx < records.size(); idx++) {
+                if (records.get(idx).value.length() != 0)
+                    values.add(records.get(idx).getValue());
             }
 
-            for(Instance in : i) {
-                boolean isMatch = true;
-                for (int rec_idx = 0; rec_idx < idxForSearchProportion; rec_idx++) {
-                    if (!values.contains(in.stringValue((int)records.get(rec_idx).getAttribute()))) {
-                        isMatch = false;
-                        break;
-                    }
-                }
-
-                if (isMatch) {
-                    proportion[(int)in.classValue()]++;
-                }
-            }
-
-            double entropy = 0;
-
-            int divider = 0;
-            for (int idx = 0; idx < num_class; idx++) {
-                divider += proportion[idx];
-    //            System.out.println(proportion[idx]);
-            }
-
-            for (int idx = 0; idx < num_class; idx++) {
-                double prob = (double)proportion[idx]/divider;
-//                System.out.println(divider);
-                if (prob!=0 && divider !=0)
-                    entropy += (-1) * prob*log2(prob);
-            }
-
-            return entropy;
+            idxForSearchProportion = values.size();
         }
-        return -1;
+        else {
+            values = attributeMember(i,(int) parent.getAttribute());
+
+            idxForSearchProportion = 1;
+        }
+        
+        for(Instance in : i) {
+            boolean isMatch = true;
+            for (int rec_idx = 0; rec_idx < idxForSearchProportion; rec_idx++) {
+                if (!values.contains(in.stringValue((int)records.get(rec_idx).getAttribute()))) {
+                    isMatch = false;
+                    break;
+                }
+            }
+            
+            /*
+                Jika semua value cocok, maka naikan nilai proporsi untuk index
+                class tertentu.
+            */
+            if (isMatch) {
+                proportion[(int)in.classValue()]++;
+            }
+        }
+
+        double entropy = 0;
+
+        int divider = 0;
+        for (int idx = 0; idx < num_class; idx++) {
+            divider += proportion[idx];
+
+        }
+        
+        /*
+            Rumus mencari Entropy
+            Entropy(S) = -p(+) log2(p(+)) - p(-) log2(p(-))
+        */
+        for (int idx = 0; idx < num_class; idx++) {
+            double prob = (double)proportion[idx]/divider;
+
+            if (prob!=0 && divider !=0)
+                entropy += (-1) * prob*log2(prob);
+        }
+
+        return entropy;
     }
     
+    /**
+     * Mengembalikan nilai gain untuk mengurangi nilai entropy.
+     * untuk pemilihan atribut, pilih nilai gain yang paling besar.
+     * 
+     * @param i
+     * @param records
+     * @return 
+     */
     public double calculateGain(Instances i, List<Record> records) {
         Record parent = records.get(0);
         Record child = records.get(1);
@@ -105,10 +142,9 @@ public class ID3 extends AbstractClassifier{
         List<Record> core = new ArrayList(1);
         core.add(new Record(parent.getAttribute(), parent.getValue()));
         double gain = calculateEntropy(i, core);
-//        System.out.println("entropy(S) : "+gain);
+        
         int numDistinct = i.numDistinctValues((int)child.getAttribute());
-        int[] distinctAttributeCount;// = i.attributeStats((int)records.get(1)
-                //.getAttribute()).nominalCounts;
+        int[] distinctAttributeCount;
         
         List<String> attributeMember = attributeMember(i,(int) child.getAttribute());
         if (parent.getValue().length() == 0) {
@@ -132,6 +168,12 @@ public class ID3 extends AbstractClassifier{
             divider += distinctAttributeCount[attrib_idx];
         }
         
+        /*
+            Rumus mencari gain
+            Gain(S,A) = Entropy(S) - sigma((Sv/S) * Entropy(Sv))
+            
+            v E Values(A)
+        */
         double entropy = 0;
         for (int attrib_idx=0; attrib_idx < numDistinct;
                 attrib_idx++) {
@@ -145,7 +187,7 @@ public class ID3 extends AbstractClassifier{
             
             entropy += ((double)distinctAttributeCount[numDistinct-attrib_idx-1]/divider) * 
                     calculateEntropy(i, records);
-//            System.out.println(calculateEntropy(i, records));
+            
             if (isEmpty) parent.value = "";
         }
         
@@ -154,6 +196,12 @@ public class ID3 extends AbstractClassifier{
         return gain;
     }
      
+    /**
+     * 
+     * @param L
+     * @param usedAttribute
+     * @return 
+     */
     private int idxMax(List L, List usedAttribute) {
         int idxMax=0;
         
@@ -175,6 +223,12 @@ public class ID3 extends AbstractClassifier{
         return idxMax;
     }
     
+    /**
+     * 
+     * @param i
+     * @param records
+     * @return 
+     */
     public double decideClass(Instances i, List<Record> records) {
         List<String> values = new ArrayList();
         
@@ -205,13 +259,10 @@ public class ID3 extends AbstractClassifier{
     public void buildClassifier(Instances i) throws Exception {
         List gains = new ArrayList();
         
-        // buat root. Tidak punya value.
+        // buat root.
         
         DT root = new DT(null);
         
-        
-//        records.add(new Record(0, "sunny"));
-//        records.add(new Record(3, ""));
         for (int idx = 0; idx < i.numAttributes()-1; idx++) {
             List<Record> records = new ArrayList();
             records.add(new Record(idx, ""));
@@ -226,7 +277,7 @@ public class ID3 extends AbstractClassifier{
         
         Stack<DT> nodeStack = new Stack();
         nodeStack.push(root);
-//        System.out.println(gains);
+        
         List <Double> usedAttribute = new ArrayList();
         usedAttribute.add(root.getAttribute());
         
@@ -236,7 +287,7 @@ public class ID3 extends AbstractClassifier{
             DT parent = nodeStack.peek();
             
             List attributeMember = attributeMember(i,(int) parent.getAttribute());
-//            System.out.println(parent.getAttribute());
+            
             // push semua value pada root attribut
             if (parent.getChild().size() == 0) 
                 for (int idx = attributeMember.size()-1; idx>=0; idx--) {
@@ -246,7 +297,6 @@ public class ID3 extends AbstractClassifier{
             gains.clear();
             
             // kalau udah kosong berarti semua anak sudah dibangkitkan
-//            System.out.println(parent.getUsedValue());
             if (parent.getChild().size() == i.numDistinctValues((int)parent.getAttribute())) {
                 nodeStack.pop();
                 if (nodeStack.size() == 0) break;
@@ -254,7 +304,7 @@ public class ID3 extends AbstractClassifier{
             else {
                 String parentValue = parent.getUsedValue().pop().toString();
                 parent.tmpValue = parentValue;
-//                System.out.println(parentValue);
+                
                 // hitung gain dan dapatkan nilai terbesar untuk menentukan
                 // atribute yang cocok untuk menjadi child node dengan value
                 // tertentu
@@ -270,7 +320,6 @@ public class ID3 extends AbstractClassifier{
                 // Jika sebuah value mempunyai entropi = 0, maka langsung
                 // masukkan atribut kelas pada node tersebut.
                 
-//                values.push(parentValue);
                 DT node = parent;
                 List<Record> listOfNodeValue = new ArrayList();
 
@@ -305,7 +354,7 @@ public class ID3 extends AbstractClassifier{
                 child.setValue(parentValue);
                 child.getUsedAttribute().addAll(parent.getUsedAttribute());
                 child.addUsedAttributeValue(selectedAttribute);
-//                System.out.println(selectedAttribute);
+                
                 // Kalau attribut yang terpilih adalah atribut kelas, maka
                 // langsung buat child baru sejumlah attribut yang diassign dengan
                 // kelasnya.

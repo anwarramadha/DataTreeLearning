@@ -40,190 +40,139 @@ public class ID3 extends AbstractClassifier{
         return value;
     }
     
-    public double calculateEntropy(Instances i, int attrib_idx, boolean root, String val) {
-        
-        int attribute_num = i.numDistinctValues(i.classIndex());
-        int[] proportion;
-        int divider;
-        if (root) {
-            proportion = new int[attribute_num];
-            List value = attributeMember(i, attrib_idx);
-            for (Instance in : i) {
-                proportion[value.indexOf(in.stringValue(attrib_idx))]++;
-            }
-            divider = i.numInstances();
-        }
-        else {
-            proportion = new int[attribute_num];
-            List value = attributeMember(i, i.classIndex());
-            for (Instance in : i) {
-                if (in.stringValue(attrib_idx).equals(val)) {
-                    proportion[value.indexOf(in.stringValue(i.classIndex()))]++;
+    public double calculateEntropy(Instances i, List<Record> records) {
+        if (records.size() > 0) {
+            int num_class = i.numClasses();
+            int[] proportion = new int[num_class];
+
+            Record parent = records.get(0);
+
+            List<String> values = new ArrayList();
+            int idxForSearchProportion;
+
+            if (parent.getValue().length() !=0 ) {
+                for (int idx = 0; idx < records.size(); idx++) {
+                    if (records.get(idx).value.length() != 0)
+                        values.add(records.get(idx).getValue());
                 }
+    //            System.out.println(values);
+                idxForSearchProportion = values.size();
             }
-            divider = 0;
-            for (int idx = 0; idx < attribute_num; idx++) {
-                divider += proportion[idx];
+            else {
+                values = attributeMember(i,(int) parent.getAttribute());
+    //            System.out.println(values);
+                idxForSearchProportion = 1;
             }
-        }
-//        System.out.println(value);
-        
-        
-        double entropy = 0;
-        for (int idx = 0; idx < attribute_num; idx++) {
-            double prob = (double)proportion[idx]/divider;
-            if (prob!=0)
-                entropy += (-1) * prob*log2(prob);
-        }
-//        System.out.println(entropy);
-        return entropy;
-    }
-    
-    private int sumMatrix(int[][] m, int row, int col){
-        int sum = 0;
-        for (int i = 0; i < row; i ++) {
-            for (int j=0; j < col; j++) sum+=m[i][j];
-        }
-        
-        return sum;
-    }
-    
-    private double calculateEntropyV(Instances i, int attrib_idxV, int attrib_idxA, List listOfA, String val, String valA) {
-        int num_class = i.numDistinctValues(i.classIndex());
-        int[] proportion = new int[num_class];
-        
-        for (Instance in : i) {
-//            System.out.println(in.stringValue(attrib_idxA));
-            if (in.stringValue(attrib_idxV).equals(val) && listOfA.contains(in.stringValue(attrib_idxA)) && in.stringValue(attrib_idxA).equals(valA)){
-                proportion[(int)in.value(i.classIndex())]++;
-            }
-        }
-        
-        double entropy = 0;
-        int divider = 0;
-        for (int idx = 0; idx < num_class; idx++) {
-            divider += proportion[idx];
-        }
-        for (int idx = 0; idx < num_class; idx++) {
-            if (divider != 0) {
-                double prob = (double)proportion[idx]/divider;
-//                System.out.print(prob+" ");
-                if (prob !=0) 
-                    entropy += (-1) * prob*log2(prob);
-            }
-        }
-        
-        return entropy;
-    }
-    
-    private int calculateValueOccurence(Instances i, int attrib_idx, String value) {
-        int valueOccurence = 0;
-//        System.out.println();
-        for (int idx = 0; idx < i.numInstances(); idx++) {
-            if (i.get(idx).stringValue(attrib_idx).equals(value)) valueOccurence ++;
-        }
-        return valueOccurence;
-    }
-    public double calculateGain(Instances i, int attrib_idx, int next_attrib_idx, boolean root, String value) {
-        
-        double ins_entropy = calculateEntropy(i, attrib_idx, root, value);
-//        System.out.println(ins_entropy);
-        
-        int attribute_num;// = i.numDistinctValues(next_attrib_idx);
-        int class_num;// = i.numDistinctValues(attrib_idx);
-        
-        List class_value = attributeMember(i, attrib_idx);
-        List attrib_values = new ArrayList();
-        List attrib_values_temp = attributeMember(i, next_attrib_idx);
-        int[][] proportion;
-        
-        double gain = ins_entropy;
-        if (root) {
-            attribute_num = i.numDistinctValues(next_attrib_idx);
-            class_num = i.numDistinctValues(attrib_idx);
-            proportion = new int[attribute_num][class_num];
-            attrib_values = attrib_values_temp;
-            for (Instance in : i) {
 
-                if (attrib_values.indexOf(in.stringValue(next_attrib_idx)) != -1)
-                    proportion[attrib_values.indexOf(in.stringValue(next_attrib_idx))]
-                            [class_value.indexOf(in.stringValue(attrib_idx))]++;
-            }
-            for (int cls_idx = 0; cls_idx < attrib_values.size(); cls_idx ++) {
-                double entropy = 0;
-                double num_val = 0;
-
-                for(int att_idx = 0; att_idx < class_num; att_idx++) {
-    //                System.out.println(proportion[cls_idx][att_idx]);
-                   num_val +=  proportion[cls_idx][att_idx];
-                }
-
-                for(int att_idx = 0; att_idx < class_num; att_idx++) {
-
-                    if (num_val != 0) {
-                        double prob = (double) proportion[cls_idx][att_idx]/num_val;
-                        if (prob!=0)
-                            entropy += (-1) * prob * log2(prob);
+            for(Instance in : i) {
+                boolean isMatch = true;
+                for (int rec_idx = 0; rec_idx < idxForSearchProportion; rec_idx++) {
+                    if (!values.contains(in.stringValue((int)records.get(rec_idx).getAttribute()))) {
+                        isMatch = false;
+                        break;
                     }
                 }
-                gain -= entropy * num_val/i.numInstances(); // jelas salah
+
+                if (isMatch) {
+                    proportion[(int)in.classValue()]++;
+                }
             }
+
+            double entropy = 0;
+
+            int divider = 0;
+            for (int idx = 0; idx < num_class; idx++) {
+                divider += proportion[idx];
+    //            System.out.println(proportion[idx]);
+            }
+
+            for (int idx = 0; idx < num_class; idx++) {
+                double prob = (double)proportion[idx]/divider;
+//                System.out.println(divider);
+                if (prob!=0 && divider !=0)
+                    entropy += (-1) * prob*log2(prob);
+            }
+
+            return entropy;
+        }
+        return -1;
+    }
+    
+    public double calculateGain(Instances i, List<Record> records) {
+        Record parent = records.get(0);
+        Record child = records.get(1);
+        
+        List<Record> core = new ArrayList(1);
+        core.add(new Record(parent.getAttribute(), parent.getValue()));
+        double gain = calculateEntropy(i, core);
+//        System.out.println("entropy(S) : "+gain);
+        int numDistinct = i.numDistinctValues((int)child.getAttribute());
+        int[] distinctAttributeCount;// = i.attributeStats((int)records.get(1)
+                //.getAttribute()).nominalCounts;
+        
+        List<String> attributeMember = attributeMember(i,(int) child.getAttribute());
+        if (parent.getValue().length() == 0) {
+            attributeMember = attributeMember(i,(int) parent.getAttribute());
+            distinctAttributeCount = i.attributeStats((int)parent
+                .getAttribute()).nominalCounts;
         }
         else {
-            attribute_num = calculateValueOccurence(i, attrib_idx, value);
-            class_num = 1;
-            proportion = new int[class_num][attribute_num];
-//            System.out.println(attribute_num);
-            
-//            int [] relIdx = new int[class_value.size()];
-//            for (int idx = 0; idx < class_value.size(); idx ++) {
-//                if (class_value.get(idx).equals(value))
-//                
-//                    attrib_values.add(attrib_values_temp.get(idx));
-//            }
-            
-            for (Instance in : i) {
-//                System.out.println(attrib_values.indexOf(in.stringValue(attrib_idx)));
-//                System.out.println(attrib_values);
-                  if (in.stringValue(attrib_idx).equals(value) && !attrib_values.contains(in.stringValue(next_attrib_idx))) 
-                      attrib_values.add(in.stringValue(next_attrib_idx));
-                
-            }
-//            attrib_values.add(attributeMember(i, next_attrib_idx).get(class_value.indexOf(value)));
-//            System.out.println(attrib_values);
-            for (Instance in : i) {
-//                System.out.println(attrib_values.indexOf(in.stringValue(attrib_idx)));
-//                System.out.println(attrib_values);
-
-                if (attrib_values.indexOf(in.stringValue(next_attrib_idx)) != -1 && in.stringValue(attrib_idx).equals(value))
-                    proportion[0][attrib_values.indexOf(in.stringValue(next_attrib_idx))]++;
-    //            proportion[value.indexOf(in.value(next_attrib_idx))]++;
-            }
-            
-            for (int cls_idx = 0; cls_idx < class_num; cls_idx ++) {
-                double entropy = 0;
-                double num_val = 0;
-
-                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
-                   num_val +=  proportion[cls_idx][att_idx];
+            distinctAttributeCount = new int[numDistinct];
+            attributeMember = attributeMember(i,(int) child.getAttribute());
+            for(Instance in : i) {
+                if (in.stringValue((int)parent.attribute).equals(parent.value)) {
+                    distinctAttributeCount[(int)in.value((int)child.attribute)]++;
                 }
 
-                for(int att_idx = 0; att_idx < attrib_values.size(); att_idx++) {
-
-                    entropy = calculateEntropyV(i, attrib_idx, 
-                            next_attrib_idx, attrib_values, class_value.get(cls_idx).toString(), attrib_values.get(att_idx).toString());
-//                    System.out.println(class_value);
-//                    System.out.println(entropy);
-                    gain -= entropy * (proportion[cls_idx][att_idx]/num_val);
-                }
             }
         }
-//        System.out.println(gain);
+        
+        int divider = 0;
+        for (int attrib_idx = 0; attrib_idx < numDistinct; attrib_idx++) {
+            divider += distinctAttributeCount[attrib_idx];
+        }
+        
+        double entropy = 0;
+        for (int attrib_idx=0; attrib_idx < numDistinct;
+                attrib_idx++) {
+            boolean isEmpty = false;
+            if (parent.value.length() != 0) 
+                child.value = attributeMember.get(attrib_idx);
+            else {
+                parent.value = attributeMember.get(attrib_idx);
+                isEmpty = true;
+            }
+            
+            entropy += ((double)distinctAttributeCount[numDistinct-attrib_idx-1]/divider) * 
+                    calculateEntropy(i, records);
+//            System.out.println(calculateEntropy(i, records));
+            if (isEmpty) parent.value = "";
+        }
+        
+        gain-=entropy;
+        
         return gain;
     }
      
-    private int idxMax(List L) {
-        return L.indexOf(Collections.max(L));
+    private int idxMax(List L, List usedAttribute) {
+        int idxMax=0;
+        
+        for (int i = 0; i < L.size(); i++) {
+            if (!usedAttribute.contains((double)i)) {
+                idxMax = i;
+                break;
+            }
+        }
+        double max = (double)L.get(idxMax);
+        
+        
+        for (int i  = idxMax; i  < L.size(); i++) {
+            if (max < (double) L.get(i) && !usedAttribute.contains((double)i)) {
+                max =  (double) L.get(i);
+                idxMax = i;
+            }
+        }
+        return idxMax;
     }
      
     @Override
@@ -231,74 +180,150 @@ public class ID3 extends AbstractClassifier{
         List gains = new ArrayList();
         
         // buat root. Tidak punya value.
-//        System.out.println(id3.calculateGain(i, 4, 3, true, ""));//test gain againts root
-        for (int idx = 0; idx < i.numAttributes()-1; idx++) {
-            gains.add(calculateGain(i, i.classIndex(), idx, true, ""));
-        }
         
         DT root = new DT(null);
-        root.setAttribute(idxMax(gains));
-    
+        
+        
+//        records.add(new Record(0, "sunny"));
+//        records.add(new Record(3, ""));
+        for (int idx = 0; idx < i.numAttributes()-1; idx++) {
+            List<Record> records = new ArrayList();
+            records.add(new Record(idx, ""));
+            records.add(new Record(3, "")); //dummy record
+            gains.add(calculateGain(i, records));
+        }
+        root.setValue("");
+        root.setAttribute(idxMax(gains, root.getUsedAttribute()));
+        root.addUsedAttributeValue(root.getAttribute());
+        
         // Bangun node baru
         
         Stack<DT> nodeStack = new Stack();
         nodeStack.push(root);
+//        System.out.println(gains);
+        List <Double> usedAttribute = new ArrayList();
+        usedAttribute.add(root.getAttribute());
         
-        while (!nodeStack.isEmpty()) {
+        Stack<String> values = new Stack();
+        
+        while (true) {
             DT parent = nodeStack.peek();
-            List parentValue = attributeMember(i, (int) parent.getAttribute());
-            int num_child = i.attribute((int) parent.getAttribute()).numValues(), idx=0;
+            
+            List attributeMember = attributeMember(i,(int) parent.getAttribute());
+//            System.out.println(parent.getAttribute());
+            // push semua value pada root attribut
+            if (parent.getChild().size() == 0) 
+                for (int idx = attributeMember.size()-1; idx>=0; idx--) {
+                    parent.getUsedValue().push(attributeMember.get(idx).toString());
+                }
+            
             gains.clear();
             
-            while (idx < num_child) {
-                
-                if (calculateEntropy(i, (int)parent.getAttribute(), false, 
-                        parentValue.get(idx).toString()) != 0) {
-                    
-                    for (int j = 0; j < i.numAttributes(); j++) {
-                        if (!parent.getUsedAttribute().contains(j))
-                            gains.add(calculateGain(i, (int) parent.getAttribute(), j, 
-                                    false, parentValue.get(idx).toString()));
-                    }
-                    
-                    double selectedAttribute = (double) idxMax(gains);
-                    DT child = DT.addChild(parent, selectedAttribute);
-                    child.setValue(parentValue.get(idx).toString());
-                    child.addUsedAttributeValue(idx);
-                    
-                    if (selectedAttribute == i.classIndex()) {
-                        for(int j = 0; j < i.numDistinctValues(i.classIndex()); j++) {
-                            gains.add(calculateGain(i, (int) child.getAttribute(), j, 
-                                        false, parentValue.get(idx).toString()));
-                        }
-                    
-                        child.setClass(i.instance(idxMax(gains)).stringValue(i.classIndex()));
-                    }
-                    else {
-                        nodeStack.push(child);
-                    }
-                    break;
-                }
-                else if (calculateEntropy(i, (int)parent.getAttribute(), false, 
-                        parentValue.get(idx).toString()) == 0 || 
-                        parent.getUsedAttribute().size() >= i.numAttributes()){
-                    
-                    DT child = DT.addChild(parent, (double)i.classIndex());
-                    
-                    for(int j = 0; j < i.numDistinctValues(i.classIndex()); j++) {
-                        gains.add(calculateGain(i, (int) child.getAttribute(), j, 
-                                    false, parentValue.get(idx).toString()));
-                    }
-                    
-                    child.setClass(i.instance(idxMax(gains)).stringValue(i.classIndex()));
-//                    nodeStack.pop();
-                    gains.clear();
-                }
-                idx++;
+            // kalau udah kosong berarti semua anak sudah dibangkitkan
+//            System.out.println(parent.getUsedValue());
+            if (parent.getChild().size() == i.numDistinctValues((int)parent.getAttribute())) {
+                nodeStack.pop();
+                if (nodeStack.size() == 0) break;
             }
-//            if (parent.getChild().size() == parent.getUsedAttribute().size()-1)
-//                nodeStack.pop();
-            
+            else {
+                String parentValue = parent.getUsedValue().pop().toString();
+                parent.aaa = parentValue;
+//                System.out.println(parentValue);
+                // hitung gain dan dapatkan nilai terbesar untuk menentukan
+                // atribute yang cocok untuk menjadi child node dengan value
+                // tertentu
+                /**
+                 *                  outlook
+                 *            sunny /
+                 *                 /
+                 *              humidity
+                 **/
+                double selectedAttribute;
+                boolean isZeroEntropy = false;
+                
+                // Jika sebuah value mempunyai entropi = 0, maka langsung
+                // masukkan atribut kelas pada node tersebut.
+                
+//                values.push(parentValue);
+                DT node = parent;
+                List<Record> listOfNodeValue = new ArrayList();
+//                
+//                for (int idx =0; idx < values.size(); idx++) {
+//                    listOfNodeValue.add(new Record(parent.getAttribute(), values.get(idx)));
+//                    System.out.println(parent.getAttribute()+" "+values.get(idx));
+//                }
+                if (node.getParent()!= null) {
+                    while (node.getParent()!=null) {
+                        String value = node.aaa;
+                        double attributeIdx = node.getAttribute();
+                        listOfNodeValue.add(new Record(attributeIdx, value));
+//                        listOfNodeValue.add(new Record(node.getAttribute(), 
+//                                parent.getUsedValue().get(0).toString()));
+//                        System.out.println(node.getAttribute()+ " "+node.aaa);
+                        
+                        node = node.getParent();
+                    }
+                    listOfNodeValue.add(new Record(node.getAttribute(), node.aaa));
+                }
+                else {
+//                    System.out.println(parent.getUsedValue().get(0).toString());
+                    listOfNodeValue.add(new Record(parent.getAttribute(), parent.aaa));
+                }
+
+                Collections.reverse(listOfNodeValue);
+                
+                if (calculateEntropy(i, listOfNodeValue) != 0) {
+                    for (int idx = 0; idx < i.numAttributes()-1; idx++) {
+                            List<Record> records = new ArrayList();
+                            records.add(new Record(parent.getAttribute(), parentValue));
+                            records.add(new Record(idx, ""));
+                            gains.add(calculateGain(i,records));
+                    }
+                    // setelah gain setiap attribute diperoleh, cari yang memiliki
+                    // nilai paling besar. Jadikan sebagai attribut child.
+                    selectedAttribute = (double) idxMax(gains, usedAttribute);
+//                    System.out.println(usedAttribute);
+//                    System.out.println(selectedAttribute);
+                }
+                else {
+                    isZeroEntropy = true;
+                    selectedAttribute = i.classIndex();
+                }
+                // setelah gain setiap attribute diperoleh, cari yang memiliki
+                // nilai paling besar. Jadikan sebagai attribut child.
+                DT child = DT.addChild(parent, selectedAttribute);
+                child.setValue(parentValue);
+                child.getUsedAttribute().addAll(parent.getUsedAttribute());
+                child.addUsedAttributeValue(selectedAttribute);
+//                System.out.println(selectedAttribute);
+                // Kalau attribut yang terpilih adalah atribut kelas, maka
+                // langsung buat child baru sejumlah attribut yang diassign dengan
+                // kelasnya.
+                // Jika tidak, maka push child kedalam stack untuk membangkitkan
+                // childnya.
+                if (isZeroEntropy) {
+                    // hitung entropy setiap nilai kelas, entropy terkecil akan 
+                    // dipilih sebagai kelas.
+                    List<Double> entropies = new ArrayList();
+                    List<String> classValues = attributeMember(i, i.classIndex());
+                    for (int num_class = 0; num_class  < i.numDistinctValues(i.classIndex());
+                            num_class++) {
+//                        entropies.add(calculateEntropy(i,);
+                    }
+                    
+//                    child.setClass(classValues.get(entropies
+//                            .indexOf(Collections.min(entropies))));
+                      child.setClass("No");
+//                    nodeStack.pop();
+//                    System.out.println(classValues.get(entropies
+//                            .indexOf(Collections.min(entropies))));
+                }
+                else {
+                    usedAttribute.add(selectedAttribute);
+                    nodeStack.push(child);
+                }
+            }
+//            DT.printTree(root, " ");
         }
         
         DT.printTree(root, " ");

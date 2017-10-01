@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Stack;
 import weka.core.Attribute;
 import weka.core.Instances;
 
@@ -29,10 +30,14 @@ public class DTL {
         ID3 id3 = new ID3();
 //        System.out.println(id3.calculateEntropy(i, 0, false, "rainy"));
 //        System.out.println(id3.calculateGain(i, 4, 3, true, ""));//test gain againts root
-//        System.out.println(id3.calculateGain(i, 0, 2, false, "sunny"));
+//        System.out.println(id3.calculateGain(i, 0, 1, false, "sunny"));
 //        System.out.println(id3.calculateGain(i, 0, 1, false, "overcast"));
         id3.buildClassifier(i);
+        Stack<Record> records = new Stack();
+        records.push(new Record(0, "rainy"));
+        records.push(new Record(1, ""));
         
+        System.out.println(id3.calculateGain(i, records));
     }
     
 }

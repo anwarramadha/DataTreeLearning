@@ -14,9 +14,12 @@ public class DT
     private final DT parent;
     private final List<DT> child = new ArrayList();
     private List<Double> usedAttribute = new ArrayList();
+    private Stack<String> usedValue = new Stack();
     private double attribute;
     private String value;
     private String classVal;
+    private int numChild = 0;
+    public String aaa;
     
     
     public DT(DT parent) {
@@ -60,6 +63,22 @@ public class DT
     
     public void addUsedAttributeValue(double value) {
         usedAttribute.add(value);
+    }
+    
+    public Stack getUsedValue() {
+        return usedValue;
+    }
+    
+    public void setUsedValue(Stack value) {
+        usedValue = value;
+    }
+    
+    public int getNumChild() {
+        return numChild;
+    }
+    
+    public void addNumChild() {
+        numChild++;
     }
     
     public static DT addChild(DT parent, double attribute) {

@@ -174,7 +174,33 @@ public class ID3 extends AbstractClassifier{
         }
         return idxMax;
     }
-     
+    
+    public double decideClass(Instances i, List<Record> records) {
+        List<String> values = new ArrayList();
+        
+        for (int idx = 0; idx < records.size(); idx++) {
+            if (records.get(idx).value.length() != 0)
+                values.add(records.get(idx).getValue());
+        }
+        double cls = 0;
+        for(Instance in : i) {
+            boolean isMatch = true;
+            for (int rec_idx = 0; rec_idx < records.size(); rec_idx++) {
+                if (!values.contains(in.stringValue((int)records.get(rec_idx).getAttribute()))) {
+                    isMatch = false;
+                    break;
+                }
+            }
+
+            if (isMatch) {
+                cls = in.classValue();
+                break;
+            }
+        }
+        
+        return cls;
+    }
+    
     @Override
     public void buildClassifier(Instances i) throws Exception {
         List gains = new ArrayList();
@@ -227,7 +253,7 @@ public class ID3 extends AbstractClassifier{
             }
             else {
                 String parentValue = parent.getUsedValue().pop().toString();
-                parent.aaa = parentValue;
+                parent.tmpValue = parentValue;
 //                System.out.println(parentValue);
                 // hitung gain dan dapatkan nilai terbesar untuk menentukan
                 // atribute yang cocok untuk menjadi child node dengan value
@@ -247,27 +273,13 @@ public class ID3 extends AbstractClassifier{
 //                values.push(parentValue);
                 DT node = parent;
                 List<Record> listOfNodeValue = new ArrayList();
-//                
-//                for (int idx =0; idx < values.size(); idx++) {
-//                    listOfNodeValue.add(new Record(parent.getAttribute(), values.get(idx)));
-//                    System.out.println(parent.getAttribute()+" "+values.get(idx));
-//                }
-                if (node.getParent()!= null) {
-                    while (node.getParent()!=null) {
-                        String value = node.aaa;
-                        double attributeIdx = node.getAttribute();
-                        listOfNodeValue.add(new Record(attributeIdx, value));
-//                        listOfNodeValue.add(new Record(node.getAttribute(), 
-//                                parent.getUsedValue().get(0).toString()));
-//                        System.out.println(node.getAttribute()+ " "+node.aaa);
-                        
-                        node = node.getParent();
-                    }
-                    listOfNodeValue.add(new Record(node.getAttribute(), node.aaa));
-                }
-                else {
-//                    System.out.println(parent.getUsedValue().get(0).toString());
-                    listOfNodeValue.add(new Record(parent.getAttribute(), parent.aaa));
+
+                while (node != null) {
+                    String value = node.tmpValue;
+                    double attributeIdx = node.getAttribute();
+                    listOfNodeValue.add(new Record(attributeIdx, value));
+
+                    node = node.getParent();
                 }
 
                 Collections.reverse(listOfNodeValue);
@@ -282,8 +294,6 @@ public class ID3 extends AbstractClassifier{
                     // setelah gain setiap attribute diperoleh, cari yang memiliki
                     // nilai paling besar. Jadikan sebagai attribut child.
                     selectedAttribute = (double) idxMax(gains, usedAttribute);
-//                    System.out.println(usedAttribute);
-//                    System.out.println(selectedAttribute);
                 }
                 else {
                     isZeroEntropy = true;
@@ -302,28 +312,23 @@ public class ID3 extends AbstractClassifier{
                 // Jika tidak, maka push child kedalam stack untuk membangkitkan
                 // childnya.
                 if (isZeroEntropy) {
-                    // hitung entropy setiap nilai kelas, entropy terkecil akan 
-                    // dipilih sebagai kelas.
-                    List<Double> entropies = new ArrayList();
-                    List<String> classValues = attributeMember(i, i.classIndex());
-                    for (int num_class = 0; num_class  < i.numDistinctValues(i.classIndex());
-                            num_class++) {
-//                        entropies.add(calculateEntropy(i,);
-                    }
                     
-//                    child.setClass(classValues.get(entropies
-//                            .indexOf(Collections.min(entropies))));
-                      child.setClass("No");
-//                    nodeStack.pop();
-//                    System.out.println(classValues.get(entropies
-//                            .indexOf(Collections.min(entropies))));
+                    listOfNodeValue.clear();
+                    node = parent;
+                    while (node != null) {
+                        String value = node.tmpValue;
+                        double attributeIdx = node.getAttribute();
+                        listOfNodeValue.add(new Record(attributeIdx, value));
+
+                        node = node.getParent();
+                    }
+                      child.setClass(decideClass(i, listOfNodeValue));
                 }
                 else {
                     usedAttribute.add(selectedAttribute);
                     nodeStack.push(child);
                 }
             }
-//            DT.printTree(root, " ");
         }
         
         DT.printTree(root, " ");

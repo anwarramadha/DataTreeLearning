@@ -4,12 +4,13 @@
  * and open the template in the editor.
  */
 package dtl;
+import java.io.Serializable;
 import java.util.*;
 /**
  *
  * @author AnwarRamadha
  */
-public class DT
+public class DT  implements Serializable
 {
     private final DT parent;
     private final List<DT> child = new ArrayList();

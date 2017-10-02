@@ -5,11 +5,14 @@
  */
 package dtl;
 
+import java.io.Serializable;
+
 /**
  *
  * @author AnwarRamadha
  */
-public class Record {
+public class Record  implements Serializable
+{
     double attribute;
     String value;
     

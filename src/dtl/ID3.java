@@ -5,12 +5,12 @@
  */
 package dtl;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 import weka.classifiers.AbstractClassifier;
-import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -18,7 +18,8 @@ import weka.core.Instances;
  *
  * @author AnwarRamadha
  */
-public class ID3 extends AbstractClassifier{
+public class ID3 extends AbstractClassifier implements Serializable{
+    private DT root;
     
     private double log2(double value) {
         return Math.log(value)/Math.log(2);
@@ -143,7 +144,7 @@ public class ID3 extends AbstractClassifier{
         core.add(new Record(parent.getAttribute(), parent.getValue()));
         double gain = calculateEntropy(i, core);
         
-        int numDistinct = i.numDistinctValues((int)child.getAttribute());
+        int numDistinct;// = i.numDistinctValues((int)child.getAttribute());
         int[] distinctAttributeCount;
         
         List<String> attributeMember = attributeMember(i,(int) child.getAttribute());
@@ -151,8 +152,11 @@ public class ID3 extends AbstractClassifier{
             attributeMember = attributeMember(i,(int) parent.getAttribute());
             distinctAttributeCount = i.attributeStats((int)parent
                 .getAttribute()).nominalCounts;
+            numDistinct =  i.attributeStats((int)parent
+                .getAttribute()).nominalCounts.length;
         }
         else {
+            numDistinct = i.numDistinctValues((int)child.getAttribute());
             distinctAttributeCount = new int[numDistinct];
             attributeMember = attributeMember(i,(int) child.getAttribute());
             for(Instance in : i) {
@@ -237,6 +241,8 @@ public class ID3 extends AbstractClassifier{
                 values.add(records.get(idx).getValue());
         }
         double cls = 0;
+        int numMatch = 0;
+        List<Integer> numMatches = new ArrayList(i.numInstances());
         for(Instance in : i) {
             boolean isMatch = true;
             for (int rec_idx = 0; rec_idx < records.size(); rec_idx++) {
@@ -244,8 +250,11 @@ public class ID3 extends AbstractClassifier{
                     isMatch = false;
                     break;
                 }
+                numMatch++;
             }
-
+            
+            numMatches.add(numMatch);
+            numMatch = 0;
             if (isMatch) {
                 cls = in.classValue();
                 break;
@@ -261,7 +270,7 @@ public class ID3 extends AbstractClassifier{
         
         // buat root.
         
-        DT root = new DT(null);
+        root = new DT(null);
         
         for (int idx = 0; idx < i.numAttributes()-1; idx++) {
             List<Record> records = new ArrayList();
@@ -282,6 +291,7 @@ public class ID3 extends AbstractClassifier{
         usedAttribute.add(root.getAttribute());
         
         Stack<String> values = new Stack();
+        int level = 0;
         
         while (true) {
             DT parent = nodeStack.peek();
@@ -297,14 +307,16 @@ public class ID3 extends AbstractClassifier{
             gains.clear();
             
             // kalau udah kosong berarti semua anak sudah dibangkitkan
-            if (parent.getChild().size() == i.numDistinctValues((int)parent.getAttribute())) {
+            if (parent.getChild().size() == i.numDistinctValues((int)parent.getAttribute()) 
+                    || level >= i.numAttributes()) {
                 nodeStack.pop();
+                level --;
                 if (nodeStack.size() == 0) break;
             }
             else {
+                level++;
                 String parentValue = parent.getUsedValue().pop().toString();
                 parent.tmpValue = parentValue;
-                
                 // hitung gain dan dapatkan nilai terbesar untuk menentukan
                 // atribute yang cocok untuk menjadi child node dengan value
                 // tertentu
@@ -333,7 +345,7 @@ public class ID3 extends AbstractClassifier{
 
                 Collections.reverse(listOfNodeValue);
                 
-                if (calculateEntropy(i, listOfNodeValue) != 0) {
+                if (calculateEntropy(i, listOfNodeValue) != 0 ) {
                     for (int idx = 0; idx < i.numAttributes()-1; idx++) {
                             List<Record> records = new ArrayList();
                             records.add(new Record(parent.getAttribute(), parentValue));
@@ -360,7 +372,7 @@ public class ID3 extends AbstractClassifier{
                 // kelasnya.
                 // Jika tidak, maka push child kedalam stack untuk membangkitkan
                 // childnya.
-                if (isZeroEntropy) {
+                if (isZeroEntropy || level >= i.numAttributes()) {
                     
                     listOfNodeValue.clear();
                     node = parent;
@@ -371,7 +383,9 @@ public class ID3 extends AbstractClassifier{
 
                         node = node.getParent();
                     }
-                      child.setClass(decideClass(i, listOfNodeValue));
+                    child.setAttribute(i.classIndex());
+                    child.setClass(decideClass(i, listOfNodeValue));
+                    level--;
                 }
                 else {
                     usedAttribute.add(selectedAttribute);
@@ -379,9 +393,29 @@ public class ID3 extends AbstractClassifier{
                 }
             }
         }
-        
-        DT.printTree(root, " ");
     }
     
-    
+    @Override
+    public double classifyInstance(Instance i) {
+        Stack<DT> nodes = new Stack();
+        
+        nodes.push(root);
+        
+        double cls = 0;
+        while(!nodes.isEmpty()) {
+            DT node = nodes.pop();
+            String value = i.stringValue((int)node.getAttribute());
+//            System.out.println(value);
+            for(DT child : node.getChild()) {
+                if (value.equals(child.getValue())){
+                    nodes.push(child);
+//                    System.out.println(child.getClassVal());
+                    if (child.getAttribute() == i.classIndex()) {
+                        cls = child.getClassVal();
+                    }
+                }
+            }
+        }
+        return cls;
+    }
 }

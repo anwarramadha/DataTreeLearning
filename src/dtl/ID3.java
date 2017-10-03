@@ -20,6 +20,7 @@ import weka.core.Instances;
  */
 public class ID3 extends AbstractClassifier implements Serializable{
     private DT root;
+    private List<Integer>numDistinctValues = new ArrayList();
     
     private double log2(double value) {
         return Math.log(value)/Math.log(2);
@@ -129,6 +130,20 @@ public class ID3 extends AbstractClassifier implements Serializable{
         return entropy;
     }
     
+    private void numDistinct(Instances i) {
+        List aa = new ArrayList();
+        
+        for (int numAttribute=0; numAttribute < i.numAttributes(); numAttribute++) {
+            for (Instance in : i) {
+                if (!aa.contains(in.value(numAttribute))) {
+                    aa.add(in.value(numAttribute));
+                }
+            }
+            
+            numDistinctValues.add(aa.size());
+        }
+    }
+    
     /**
      * Mengembalikan nilai gain untuk mengurangi nilai entropy.
      * untuk pemilihan atribut, pilih nilai gain yang paling besar.
@@ -158,11 +173,13 @@ public class ID3 extends AbstractClassifier implements Serializable{
         }
         else {
             attributeMember = attributeMember(i,(int) child.getAttribute());
-            numDistinct = i.numDistinctValues((int)child.getAttribute());
+            
+            numDistinct = numDistinctValues.get(child.attribute);
             distinctAttributeCount = new int[numDistinct];
             for(Instance in : i) {
                 if (in.stringValue((int)parent.attribute).equals(parent.value)) {
-                    distinctAttributeCount[(int)in.value((int)child.attribute)]++;
+                    
+                    distinctAttributeCount[(int)in.value(child.attribute)]++;
                 }
 
             }
@@ -274,7 +291,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
     @Override
     public void buildClassifier(Instances i) throws Exception {
         List gains = new ArrayList();
-        
+        numDistinct(i);
         // buat root.
         
         root = new DT(null);
@@ -294,7 +311,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
         Stack<DT> nodeStack = new Stack();
         nodeStack.push(root);
         
-        List <Double> usedAttribute = new ArrayList();
+        List <Integer> usedAttribute = new ArrayList();
         usedAttribute.add(root.getAttribute());
         
         while (true) {
@@ -331,7 +348,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
                  *                 /
                  *              humidity
                  **/
-                double selectedAttribute;
+                int selectedAttribute;
                 boolean isZeroEntropy = false;
                 
                 // Jika sebuah value mempunyai entropi = 0, maka langsung
@@ -342,7 +359,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
 
                 while (node != null) {
                     String value = node.tmpValue;
-                    double attributeIdx = node.getAttribute();
+                    int attributeIdx = node.getAttribute();
                     listOfNodeValue.add(new Record(attributeIdx, value));
 
                     node = node.getParent();
@@ -361,7 +378,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
                     // setelah gain setiap attribute diperoleh, cari yang memiliki
                     // nilai paling besar. Jadikan sebagai attribut child.
 //                    System.out.println("used attribute : "+usedAttribute);
-                    selectedAttribute = (double) idxMax(gains, usedAttribute);
+                    selectedAttribute = idxMax(gains, usedAttribute);
                 }
                 else {
 //                    System.out.println("NOl");
@@ -387,7 +404,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
                     node = parent;
                     while (node != null) {
                         String value = node.tmpValue;
-                        double attributeIdx = node.getAttribute();
+                        int attributeIdx = node.getAttribute();
                         listOfNodeValue.add(new Record(attributeIdx, value));
 
                         node = node.getParent();

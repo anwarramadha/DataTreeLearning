@@ -13,15 +13,15 @@ import java.io.Serializable;
  */
 public class Record  implements Serializable
 {
-    double attribute;
+    int attribute;
     String value;
     
-    public Record (double attribute, String value) {
+    public Record (int attribute, String value) {
         this.attribute = attribute;
         this.value = value;
     }
     
-    public double getAttribute() {
+    public int getAttribute() {
         return attribute;
     }
     

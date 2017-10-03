@@ -9,10 +9,13 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Stack;
 import weka.classifiers.Evaluation;
 import weka.core.Attribute;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
@@ -28,7 +31,7 @@ public class DTL {
      */
     public static void main(String[] args) throws FileNotFoundException, IOException, Exception {
         // TODO code application logic here
-        BufferedReader reader = new BufferedReader(new FileReader("E:\\Weka-3-8\\data\\iris.2D.arff"));
+        BufferedReader reader = new BufferedReader(new FileReader("E:\\Weka-3-8\\data\\contact-lenses.arff"));
         Instances i = new Instances(reader);
         
         NumericToNominal convert= new NumericToNominal();
@@ -39,7 +42,10 @@ public class DTL {
 
         convert.setOptions(options);
         convert.setInputFormat(i);
-
+        
+        
+        
+        
         Instances newData=Filter.useFilter(i, convert);
         newData.setClassIndex(newData.numAttributes()-1);
         
@@ -47,7 +53,8 @@ public class DTL {
         ID3 id3 = new ID3();
         id3.buildClassifier(newData);
         Evaluation eval = new Evaluation(newData);
-        eval.evaluateModel(id3, newData);
+//        eval.evaluateModel(id3, newData);
+        eval.crossValidateModel(id3, newData, 10, new Random(1));
         System.out.println(eval.toSummaryString());
     }
     

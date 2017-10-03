@@ -16,7 +16,7 @@ public class DT  implements Serializable
     private final List<DT> child = new ArrayList();
     private final List<Double> usedAttribute = new ArrayList();
     private Stack<String> usedValue = new Stack();
-    private double attribute;
+    private int attribute;
     private String value;
     private double classVal = -1;
     private int numChild = 0;
@@ -34,11 +34,11 @@ public class DT  implements Serializable
     public List<DT> getChild(){
         return child;
     }
-    public double getAttribute() {
+    public int getAttribute() {
         return attribute;
     }
     
-    public void setAttribute(double attribute) {
+    public void setAttribute(int attribute) {
         this.attribute = attribute;
     }
             
@@ -82,7 +82,7 @@ public class DT  implements Serializable
         numChild++;
     }
     
-    public static DT addChild(DT parent, double attribute) {
+    public static DT addChild(DT parent, int attribute) {
         DT node = new DT(parent);
         node.setAttribute(attribute);
         parent.getChild().add(node);

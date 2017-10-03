@@ -105,7 +105,8 @@ public class ID3 extends AbstractClassifier implements Serializable{
                 proportion[(int)in.classValue()]++;
             }
         }
-
+        
+//        System.out.println(values);
         double entropy = 0;
 
         int divider = 0;
@@ -156,9 +157,9 @@ public class ID3 extends AbstractClassifier implements Serializable{
                 .getAttribute()).nominalCounts.length;
         }
         else {
+            attributeMember = attributeMember(i,(int) child.getAttribute());
             numDistinct = i.numDistinctValues((int)child.getAttribute());
             distinctAttributeCount = new int[numDistinct];
-            attributeMember = attributeMember(i,(int) child.getAttribute());
             for(Instance in : i) {
                 if (in.stringValue((int)parent.attribute).equals(parent.value)) {
                     distinctAttributeCount[(int)in.value((int)child.attribute)]++;
@@ -179,7 +180,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
             v E Values(A)
         */
         double entropy = 0;
-        for (int attrib_idx=0; attrib_idx < numDistinct;
+        for (int attrib_idx=0; attrib_idx < attributeMember.size();
                 attrib_idx++) {
             boolean isEmpty = false;
             if (parent.value.length() != 0) 
@@ -227,6 +228,16 @@ public class ID3 extends AbstractClassifier implements Serializable{
         return idxMax;
     }
     
+    private int max(int[] values, int numValues) {
+        int max = values[0], idx = 0;
+        for (int i=1; i < numValues; i++) {
+            if (max<values[i]) {
+                max = values[i];
+                idx = i;
+            }
+        }
+        return idx;
+    }
     /**
      * 
      * @param i
@@ -235,6 +246,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
      */
     public double decideClass(Instances i, List<Record> records) {
         List<String> values = new ArrayList();
+        int[] commonValue = new int[i.numClasses()];
         
         for (int idx = 0; idx < records.size(); idx++) {
             if (records.get(idx).value.length() != 0)
@@ -250,12 +262,13 @@ public class ID3 extends AbstractClassifier implements Serializable{
                 }
             }
             if (isMatch) {
-                cls = in.classValue();
+//                cls = in.classValue();
+                commonValue[(int)in.classValue()]++;
                 break;
             }
         }
         
-        return cls;
+        return max(commonValue, i.numClasses());
     }
     
     @Override
@@ -284,9 +297,6 @@ public class ID3 extends AbstractClassifier implements Serializable{
         List <Double> usedAttribute = new ArrayList();
         usedAttribute.add(root.getAttribute());
         
-        Stack<String> values = new Stack();
-        int level = 0;
-        
         while (true) {
             DT parent = nodeStack.peek();
             
@@ -302,15 +312,16 @@ public class ID3 extends AbstractClassifier implements Serializable{
             
             // kalau udah kosong berarti semua anak sudah dibangkitkan
             if (parent.getChild().size() == i.numDistinctValues((int)parent.getAttribute()) 
-                    || level >= i.numAttributes()) {
+                    || usedAttribute.size() == i.numAttributes()) {
                 nodeStack.pop();
-                level --;
+                usedAttribute.remove(usedAttribute.size()-1);
                 if (nodeStack.isEmpty()) break;
             }
             else {
-                level++;
+//                System.out.println(parent.getUsedValue());
                 String parentValue = parent.getUsedValue().pop().toString();
                 parent.tmpValue = parentValue;
+//                System.out.println(parentValue);
                 // hitung gain dan dapatkan nilai terbesar untuk menentukan
                 // atribute yang cocok untuk menjadi child node dengan value
                 // tertentu
@@ -338,8 +349,9 @@ public class ID3 extends AbstractClassifier implements Serializable{
                 }
 
                 Collections.reverse(listOfNodeValue);
-                
-                if (calculateEntropy(i, listOfNodeValue) != 0 ) {
+                double entropy = calculateEntropy(i, listOfNodeValue);
+//                System.out.println(entropy);
+                if (entropy != 0 ) {
                     for (int idx = 0; idx < i.numAttributes()-1; idx++) {
                             List<Record> records = new ArrayList();
                             records.add(new Record(parent.getAttribute(), parentValue));
@@ -348,12 +360,15 @@ public class ID3 extends AbstractClassifier implements Serializable{
                     }
                     // setelah gain setiap attribute diperoleh, cari yang memiliki
                     // nilai paling besar. Jadikan sebagai attribut child.
+//                    System.out.println("used attribute : "+usedAttribute);
                     selectedAttribute = (double) idxMax(gains, usedAttribute);
                 }
                 else {
+//                    System.out.println("NOl");
                     isZeroEntropy = true;
                     selectedAttribute = i.classIndex();
                 }
+//                    System.out.println("used attribute : "+usedAttribute);
                 // setelah gain setiap attribute diperoleh, cari yang memiliki
                 // nilai paling besar. Jadikan sebagai attribut child.
                 DT child = DT.addChild(parent, selectedAttribute);
@@ -366,7 +381,7 @@ public class ID3 extends AbstractClassifier implements Serializable{
                 // kelasnya.
                 // Jika tidak, maka push child kedalam stack untuk membangkitkan
                 // childnya.
-                if (isZeroEntropy || level >= i.numAttributes()) {
+                if (isZeroEntropy || usedAttribute.size() == i.numAttributes()) {
                     
                     listOfNodeValue.clear();
                     node = parent;
@@ -379,10 +394,10 @@ public class ID3 extends AbstractClassifier implements Serializable{
                     }
                     child.setAttribute(i.classIndex());
                     child.setClass(decideClass(i, listOfNodeValue));
-                    level--;
                 }
                 else {
-                    usedAttribute.add(selectedAttribute);
+                    if (usedAttribute.size() < i.numAttributes())
+                        usedAttribute.add(selectedAttribute);
                     nodeStack.push(child);
                 }
             }
